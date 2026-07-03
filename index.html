@@ -35,7 +35,7 @@
 
         /* Hero */
         .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 2rem; background: url('assets/images/bg3.png') center/cover no-repeat; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.35); pointer-events: none; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.25); pointer-events: none; }
         .hero-content { text-align: center; position: relative; z-index: 2; max-width: 900px; }
         .hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(14,165,233,0.06); border: 1px solid rgba(14,165,233,0.15); border-radius: 100px; font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 2rem; }
         .hero-badge span { color: var(--color-rise); font-weight: 600; }
@@ -77,7 +77,7 @@
         .nav-mobile-overlay a:hover { color: var(--color-rise); }
 
         /* Sections */
-        .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+        .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
         .section-header { text-align: center; margin-bottom: 4rem; }
         .section-number { font-size: 0.875rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; }
         .section-title { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1rem; line-height: 1.2; }
@@ -91,54 +91,30 @@
         /* Chapters */
         .chapter-rise {
         position: relative;
-        background: #ffffff;
-    }
-    .chapter-rise::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: url('assets/images/bg4.png') center/cover no-repeat;
-        opacity: 0.12;
-        z-index: 0;
+        background: 
+            linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)),
+            url('assets/images/bg4.png') center/cover no-repeat;
     }
         .chapter-rise .section-title { color: var(--color-rise); }
         .chapter-fall {
         position: relative;
-        background: #ffffff;
-    }
-    .chapter-fall::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: url('assets/images/IMG_20260702_233857.png') center/cover no-repeat;
-        opacity: 0.12;
-        z-index: 0;
+        background: 
+            linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)),
+            url('assets/images/IMG_20260702_233857.png') center/cover no-repeat;
     }
         .chapter-fall .section-title { color: var(--color-fall-light); }
         .chapter-human {
         position: relative;
-        background: #ffffff;
-    }
-    .chapter-human::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: url('assets/images/IMG_20260702_234035.png') center/cover no-repeat;
-        opacity: 0.12;
-        z-index: 0;
+        background: 
+            linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)),
+            url('assets/images/IMG_20260702_234035.png') center/cover no-repeat;
     }
         .chapter-human .section-title { color: var(--color-human); }
         .chapter-answer {
         position: relative;
-        background: #ffffff;
-    }
-    .chapter-answer::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: url('assets/images/IMG_20260702_234152.png') center/cover no-repeat;
-        opacity: 0.12;
-        z-index: 0;
+        background: 
+            linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)),
+            url('assets/images/IMG_20260702_234152.png') center/cover no-repeat;
     }
         .chapter-answer .section-title { color: var(--color-answer); }
         .chapter-rise, .chapter-fall, .chapter-human, .chapter-answer { position: relative; }
@@ -211,7 +187,7 @@
 
         /* Conclusion */
         .conclusion { text-align: center; padding: 4rem 2rem; background: url('assets/images/bg1.png') center/cover no-repeat; }
-        .conclusion-content { max-width: 800px; margin: 0 auto; position: relative; z-index: 1; }
+        .conclusion-content { max-width: 800px; margin: 0 auto; }
         .conclusion-quote { font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 700; line-height: 1.4; margin-bottom: 2rem; background: linear-gradient(135deg, #1e293b 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .conclusion-text { font-size: 1rem; color: var(--color-text-muted); line-height: 1.8; margin-bottom: 2rem; }
         .conclusion-source { font-size: 0.875rem; color: var(--color-text-muted); opacity: 0.6; }
