@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI就业加减法：用数据讲述中国就业市场的结构性变迁">
+    <title>AI就业加减法 | AI正在创造什么，又在消灭什么</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <script src="assets/js/echarts.min.js"></script>
+    <script src="assets/js/gsap.min.js"></script>
+    <script src="assets/js/ScrollTrigger.min.js"></script>
+    <style>
+        :root {
+            --color-rise: #0284c7; --color-rise-light: #38bdf8;
+            --color-fall: #64748b; --color-fall-light: #475569;
+            --color-human: #f97316; --color-human-light: #fb923c;
+            --color-answer: #7c3aed; --color-answer-light: #a78bfa;
+            --color-bg: #ffffff; --color-bg-light: #f8fafc;
+            --color-text: #1e293b; --color-text-muted: #64748b;
+            --color-border: #e2e8f0;
+            --font-sans: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); line-height: 1.8; overflow-x: hidden; }
+        p { margin-bottom: 1.25rem; line-height: 1.9; }
+        strong { color: var(--color-text); font-weight: 600; }
+        a, button, .data-card, .action-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+
+        /* Hero */
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 2rem; background: url('assets/images/bg3.png') center/cover no-repeat; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.45); pointer-events: none; }
+        .hero-content { text-align: center; position: relative; z-index: 2; max-width: 900px; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(14,165,233,0.06); border: 1px solid rgba(14,165,233,0.15); border-radius: 100px; font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 2rem; }
+        .hero-badge span { color: var(--color-rise); font-weight: 600; }
+        .hero h1 { font-size: clamp(3.5rem, 9vw, 7rem); font-weight: 900; line-height: 1.05; margin-bottom: 1.5rem; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+        .hero h1 .highlight-rise { background: linear-gradient(135deg, var(--color-rise), var(--color-rise-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero h1 .highlight-fall { background: linear-gradient(135deg, var(--color-fall-light), var(--color-fall)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: clamp(1.125rem, 2.5vw, 1.5rem); color: var(--color-text-muted); max-width: 600px; margin: 0 auto 3rem; font-weight: 300; }
+        .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 4rem; padding: 2rem; background: rgba(14,165,233,0.03); border: 1px solid #e2e8f0; border-radius: 1rem; }
+        .hero-stat { text-align: center; }
+        .hero-stat-value { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .hero-stat-value.rise { color: var(--color-rise); }
+        .hero-stat-value.fall { color: var(--color-fall); }
+        .hero-stat-value.human { color: var(--color-human); }
+        .hero-stat-label { font-size: 0.875rem; color: var(--color-text-muted); }
+        .hero-stat-source { font-size: 0.75rem; color: var(--color-text-muted); opacity: 0.6; margin-top: 0.25rem; }
+        .scroll-indicator { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--color-text-muted); font-size: 0.875rem; animation: bounce 2s infinite; }
+        .scroll-indicator svg { width: 24px; height: 24px; }
+        @keyframes bounce { 0%,20%,50%,80%,100%{transform:translateX(-50%) translateY(0)} 40%{transform:translateX(-50%) translateY(-10px)} 60%{transform:translateX(-50%) translateY(-5px)} }
+        #hero-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        /* Nav */
+        .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 0.875rem 2rem; background: rgba(255,255,255,0.75); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-bottom: 1px solid rgba(226,232,240,0.6); box-shadow: 0 1px 12px rgba(0,0,0,0.04); transform: translateY(-100%); transition: transform 0.3s ease; }
+        .nav.visible { transform: translateY(0); }
+        .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .nav-logo { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, var(--color-rise), var(--color-answer)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a { color: #475569; text-decoration: none; font-size: 0.875rem; font-weight: 500; }
+        .nav-links a:hover, .nav-links a.active { color: var(--color-text); }
+        .nav-links a.active { position: relative; }
+        .nav-links a.active::after { content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--color-rise), var(--color-answer)); border-radius: 1px; }
+        .nav-hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+        .nav-hamburger span { width: 24px; height: 2px; background: var(--color-text); border-radius: 2px; transition: all 0.3s ease; }
+        .nav-hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px,5px); }
+        .nav-hamburger.active span:nth-child(2) { opacity: 0; }
+        .nav-hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px,-5px); }
+        .nav-mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.97); backdrop-filter: blur(20px); z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 2rem; }
+        .nav-mobile-overlay.active { display: flex; }
+        .nav-mobile-overlay a { color: #1e293b; text-decoration: none; font-size: 1.5rem; font-weight: 600; }
+        .nav-mobile-overlay a:hover { color: var(--color-rise); }
+
+        /* Sections */
+        .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .section-header { text-align: center; margin-bottom: 4rem; }
+        .section-number { font-size: 0.875rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; }
+        .section-title { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1rem; line-height: 1.2; }
+        .section-subtitle { font-size: 1.125rem; color: var(--color-text-muted); max-width: 600px; margin: 0 auto; }
+        .section-divider { width: 60px; height: 4px; margin: 1.5rem auto 0; border-radius: 2px; }
+        .section-divider.rise { background: linear-gradient(90deg, var(--color-rise), var(--color-rise-light)); }
+        .section-divider.fall { background: linear-gradient(90deg, var(--color-fall), var(--color-fall-light)); }
+        .section-divider.human { background: linear-gradient(90deg, var(--color-human), var(--color-human-light)); }
+        .section-divider.answer { background: linear-gradient(90deg, var(--color-answer), var(--color-answer-light)); }
+
+        /* Chapters */
+        .chapter-rise { background: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('assets/images/bg4.png') center/cover no-repeat; }
+        .chapter-rise .section-title { color: var(--color-rise); }
+        .chapter-fall { background: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('assets/images/IMG_20260702_233857.png') center/cover no-repeat; }
+        .chapter-fall .section-title { color: var(--color-fall-light); }
+        .chapter-human { background: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('assets/images/IMG_20260702_234035.png') center/cover no-repeat; }
+        .chapter-human .section-title { color: var(--color-human); }
+        .chapter-answer { background: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('assets/images/IMG_20260702_234152.png') center/cover no-repeat; }
+        .chapter-answer .section-title { color: var(--color-answer); }
+        .chapter-rise, .chapter-fall, .chapter-human, .chapter-answer { position: relative; }
+        .chapter-rise::after, .chapter-fall::after, .chapter-human::after, .chapter-answer::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: transparent; }
+
+        /* Chart Container */
+        .chart-container { background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(226,232,240,0.7); border-radius: 1.25rem; padding: 2rem; margin: 2rem 0; position: relative; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
+        .chart-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 2px 2px 0 0; }
+        .chart-container.rise::before { background: linear-gradient(90deg, var(--color-rise), var(--color-rise-light)); }
+        .chart-container.fall::before { background: linear-gradient(90deg, var(--color-fall), var(--color-fall-light)); }
+        .chart-container.human::before { background: linear-gradient(90deg, var(--color-human), var(--color-human-light)); }
+        .chart-container.answer::before { background: linear-gradient(90deg, var(--color-answer), var(--color-answer-light)); }
+        .chart-container:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+        .chart-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .chart-subtitle { font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 1.5rem; }
+        .chart { width: 100%; height: 400px; }
+        .chart-source { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; font-size: 0.75rem; color: var(--color-text-muted); }
+        .chart-source::before { content: '📊 '; }
+
+        /* Chart Pair Layout */
+        .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0; }
+        .chart-pair .chart-container { margin: 0; display: flex; flex-direction: column; }
+        .chart-pair .chart { height: 350px; flex: 1; }
+        .chart-pair .risk-bars { flex: 1; }
+
+        /* Data Cards */
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .data-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 1.25rem; padding: 1.75rem; position: relative; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
+        .data-card:hover { transform: translateY(-8px) scale(1.02); border-color: var(--color-rise); box-shadow: 0 24px 48px rgba(2,132,199,0.12); }
+        .data-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem; }
+        .data-card-icon.rise { background: rgba(14,165,233,0.08); }
+        .data-card-icon.fall { background: rgba(100,116,139,0.08); }
+        .data-card-icon.human { background: rgba(249,115,22,0.08); }
+        .data-card-icon.answer { background: rgba(139,92,246,0.08); }
+        .data-card-value { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .data-card-value.rise { color: var(--color-rise); }
+        .data-card-value.fall { color: var(--color-fall-light); }
+        .data-card-value.human { color: var(--color-human); }
+        .data-card-value.answer { color: var(--color-answer); }
+        .data-card-label { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .data-card-desc { font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.8; }
+        .data-card-source { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; font-size: 0.75rem; color: var(--color-text-muted); }
+
+        /* Risk Bars */
+        .risk-bars { margin: 1rem 0; }
+        .risk-bar-item { display: grid; grid-template-columns: 100px 1fr 50px; gap: 0.75rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+        .risk-bar-item:last-child { border-bottom: none; }
+        .risk-bar-name { font-size: 0.8rem; font-weight: 500; color: #475569; white-space: nowrap; }
+        .risk-bar-track { height: 10px; background: #f1f5f9; border-radius: 5px; overflow: hidden; }
+        .risk-bar-fill { height: 100%; border-radius: 5px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); width: 0; }
+        .risk-bar-fill.high { background: linear-gradient(90deg, #ef4444, #fca5a5); }
+        .risk-bar-fill.medium { background: linear-gradient(90deg, #f59e0b, #fde68a); }
+        .risk-bar-fill.low { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+        .risk-bar-value { font-size: 0.8rem; font-weight: 700; text-align: right; color: #475569; }
+
+        /* Insight Box */
+        .insight-box { background: linear-gradient(135deg, rgba(2,132,199,0.06) 0%, rgba(124,58,237,0.06) 100%); border: 1px solid rgba(2,132,199,0.15); border-radius: 1.25rem; padding: 2rem; margin: 2rem 0; position: relative; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .insight-box::before { content: '\1F4A1'; position: absolute; top: -12px; left: 20px; font-size: 1.5rem; background: #ffffff; padding: 0 0.5rem; }
+        .insight-box-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--color-rise); }
+        .insight-box-content { font-size: 0.9375rem; line-height: 1.9; color: var(--color-text-muted); }
+
+        /* Action Cards */
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 2rem 0; }
+        .action-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 1.25rem; padding: 2rem; position: relative; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
+        .action-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-answer), var(--color-answer-light)); }
+        .action-card-number { font-size: 3rem; font-weight: 900; color: var(--color-answer); opacity: 0.3; margin-bottom: 1rem; }
+        .action-card-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; }
+        .action-card-desc { font-size: 0.9375rem; color: var(--color-text-muted); line-height: 1.9; margin-bottom: 1.5rem; }
+        .action-card-stat { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); border-radius: 100px; font-size: 0.875rem; font-weight: 600; color: var(--color-answer); }
+
+        /* Conclusion */
+        .conclusion { text-align: center; padding: 4rem 2rem; background: url('assets/images/bg1.png') center/cover no-repeat; }
+        .conclusion-content { max-width: 800px; margin: 0 auto; }
+        .conclusion-quote { font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 700; line-height: 1.4; margin-bottom: 2rem; background: linear-gradient(135deg, #1e293b 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .conclusion-text { font-size: 1rem; color: var(--color-text-muted); line-height: 1.8; margin-bottom: 2rem; }
+        .conclusion-source { font-size: 0.875rem; color: var(--color-text-muted); opacity: 0.6; }
+
+        /* Footer */
+        .footer { padding: 2rem 2rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; position: relative; }
+        .footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 0%, #0ea5e9 20%, #8b5cf6 50%, #f97316 80%, transparent 100%); opacity: 0.5; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2rem; }
+        .footer-brand { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, #1e293b 0%, #64748b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .footer-desc { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.6; }
+        .footer-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; color: var(--color-text); }
+        .footer-links { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+        .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: 0.8rem; }
+        .footer-links a:hover { color: var(--color-text); }
+        .footer-bottom { max-width: 1200px; margin: 1.5rem auto 0; padding-top: 1rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--color-text-muted); }
+        .footer-copyright { max-width: 1200px; margin: 1rem auto 0; padding: 0.75rem 0; border-top: 1px solid #e2e8f0; font-size: 0.7rem; color: var(--color-text-muted); opacity: 0.5; line-height: 1.6; }
+        .footer-copyright p { margin-bottom: 0.5rem; }
+
+        /* Section Transition */
+        .section-transition { height: 1px; position: relative; overflow: hidden; background: transparent; }
+
+        /* Mouse Follower */
+        .mouse-follower { position: fixed; width: 24px; height: 24px; border-radius: 50%; pointer-events: none; z-index: 10000; background: rgba(14,165,233,0.1); transition: transform 0.15s ease, width 0.3s ease, height 0.3s ease; transform: translate(-50%,-50%); }
+        .mouse-follower-dot { position: fixed; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 10001; background: #0ea5e9; transform: translate(-50%,-50%); }
+        .mouse-glow { position: fixed; width: 300px; height: 300px; border-radius: 50%; pointer-events: none; z-index: 0; background: radial-gradient(circle, rgba(14,165,233,0.04) 0%, transparent 70%); transform: translate(-50%,-50%); }
+
+        /* Scroll Progress */
+        .scroll-progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #0ea5e9, #8b5cf6); z-index: 10002; transform-origin: left; transform: scaleX(0); }
+
+        /* Chart Download & Filter */
+        .chart-download-btn { position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.03); border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; color: var(--color-text-muted); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; z-index: 10; }
+        .chart-download-btn:hover { background: rgba(14,165,233,0.08); border-color: var(--color-rise); }
+        .chart-filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .chart-filter-btn { padding: 6px 16px; border: 1px solid #e2e8f0; border-radius: 100px; background: transparent; color: var(--color-text-muted); font-size: 0.8rem; cursor: pointer; font-family: var(--font-sans); }
+        .chart-filter-btn:hover, .chart-filter-btn.active { background: rgba(14,165,233,0.08); border-color: var(--color-rise); color: var(--color-rise); }
+        .chart-sankey { height: 500px; }
+        @keyframes pulseHighlight { 0%{box-shadow:0 0 0 0 rgba(14,165,233,0.4)} 70%{box-shadow:0 0 0 12px rgba(14,165,233,0)} 100%{box-shadow:0 0 0 0 rgba(14,165,233,0)} }
+        .data-card.highlight-pulse { animation: pulseHighlight 1.5s ease; border-color: #0ea5e9 !important; }
+
+        /* Responsive */
+        @media (max-width: 1024px) { .hero-stats{grid-template-columns:repeat(2,1fr)} .data-grid{grid-template-columns:repeat(2,1fr)} .action-grid{grid-template-columns:repeat(2,1fr)} .chart-pair{grid-template-columns:1fr} }
+        @media (max-width: 768px) { .hero{padding:1.5rem} .hero-stats{grid-template-columns:1fr} .nav-links{display:none} .nav-hamburger{display:flex} .section{padding:4rem 1.5rem} .section-title{font-size:1.75rem} .chart{height:300px} .chart-container{padding:1.5rem} .data-grid{grid-template-columns:1fr} .action-grid{grid-template-columns:1fr} .risk-bar-item{grid-template-columns:80px 1fr 40px;gap:0.5rem} .risk-bar-name{font-size:0.75rem} .section-transition{height:60px} .conclusion{padding:4rem 1.5rem} .footer-inner{grid-template-columns:1fr;gap:2rem} .footer-bottom{flex-direction:column;gap:1rem;text-align:center} .chart-pair{grid-template-columns:1fr} .mouse-follower,.mouse-follower-dot,.mouse-glow{display:none!important} }
+        @media (max-width: 480px) { .hero{padding:1rem} .data-card{padding:1rem} .insight-box{padding:1.5rem} .action-card{padding:1.5rem} }
+    </style>
+</head>
+<body>
+    <div id="progress-bar" style="position:fixed;top:0;left:0;width:0%;height:3px;background:linear-gradient(90deg,#0ea5e9,#8b5cf6);z-index:9999;transition:width 0.1s linear"></div>
+    <button id="back-to-top" style="position:fixed;bottom:2rem;right:2rem;width:48px;height:48px;border-radius:50%;background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;font-size:1.25rem;cursor:pointer;opacity:0;visibility:hidden;transition:all 0.3s;z-index:1000;display:flex;align-items:center;justify-content:center" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+    <button id="share-button" style="position:fixed;bottom:2rem;right:5rem;width:48px;height:48px;border-radius:50%;background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;font-size:1rem;cursor:pointer;opacity:0;visibility:hidden;transition:all 0.3s;z-index:1000;display:flex;align-items:center;justify-content:center" onclick="shareArticle()">📤</button>
+    <div class="scroll-progress" id="scrollProgress" style="width:100%"></div>
+    <div class="mouse-follower" id="mouseFollower"></div>
+    <div class="mouse-follower-dot" id="mouseDot"></div>
+    <div class="mouse-glow" id="mouseGlow"></div>
+    <div style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:hidden" id="particles"></div>
+
+    <nav class="nav" id="nav"><div class="nav-inner"><div class="nav-logo">AI就业加减法</div><ul class="nav-links"><li><a href="#chapter-rise" class="active">创造篇</a></li><li><a href="#chapter-fall">消灭篇</a></li><li><a href="#chapter-human">焦虑篇</a></li><li><a href="#chapter-answer">答案篇</a></li></ul><div class="nav-hamburger" id="navHamburger"><span></span><span></span><span></span></div></div></nav>
+    <div class="nav-mobile-overlay" id="mobileOverlay"><a href="#chapter-rise">创造篇</a><a href="#chapter-fall">消灭篇</a><a href="#chapter-human">焦虑篇</a><a href="#chapter-answer">答案篇</a></div>
+
+    <section class="hero" id="hero"><canvas id="hero-canvas"></canvas><div class="hero-content"><div class="hero-badge"><span>AI就业加减法</span> · 数据驱动叙事</div><h1><span class="highlight-rise">AI</span>就业<br><span class="highlight-fall">加减法</span></h1><p class="hero-subtitle">AI正在创造什么，又在消灭什么？<br>用数据讲述中国就业市场的结构性变迁</p><div class="hero-stats"><div class="hero-stat"><div class="hero-stat-value rise">+74.1%</div><div class="hero-stat-label">AI岗位月均新发增速</div><div class="hero-stat-source">BOSS直聘 · 2025年</div></div><div class="hero-stat"><div class="hero-stat-value fall">88%</div><div class="hero-stat-label">数据录入员自动化风险</div><div class="hero-stat-source">综合研究预测</div></div><div class="hero-stat"><div class="hero-stat-value human">57.2%</div><div class="hero-stat-label">职场人愿从事AI职业</div><div class="hero-stat-source">智联招聘 · 2025年春季</div></div></div></div><div class="scroll-indicator"><span>向下滚动探索</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></div></section>
+
+    <section class="chapter-rise" id="chapter-rise"><div class="section"><div class="section-header"><div class="section-number">Chapter 01</div><h2 class="section-title">AI正在创造什么？</h2><p class="section-subtitle">从程序员到销售，AI新职业全景扫描</p><div class="section-divider rise"></div></div><div class="data-grid"><div class="data-card"><div class="data-card-icon rise">📈</div><div class="data-card-value rise">+74.1%</div><div class="data-card-label">AI岗位月均新发增速</div><div class="data-card-desc">2025年AI岗位月均新发数增速达到74.1%，三年间从8.5%跃升至此，呈现爆发式增长态势。</div><div class="data-card-source">数据来源：BOSS直聘《杭州AI岗位市场调研（2025-2026）》</div></div><div class="data-card"><div class="data-card-icon rise">👨‍💻</div><div class="data-card-value rise">+317%</div><div class="data-card-label">AI工程师需求增长</div><div class="data-card-desc">AI工程师岗位需求增长317%，成为技术领域最炙手可热的职业方向。</div><div class="data-card-source">数据来源：BOSS直聘</div></div><div class="data-card"><div class="data-card-icon rise">💼</div><div class="data-card-value rise">+682%</div><div class="data-card-label">非技术AI岗增速</div><div class="data-card-desc">销售、行政、商务等非技术类AI岗位增速高达682%，远超技术岗位。</div><div class="data-card-source">数据来源：BOSS直聘</div></div></div><div class="chart-pair"><div class="chart-container rise"><div class="chart-title">AI岗位三年增速跃升</div><div class="chart-subtitle">从缓慢增长到爆发式增长的转折点</div><div class="chart" id="chart-rise-1"></div><div class="chart-source">数据来源：BOSS直聘《杭州AI岗位市场调研（2025-2026）》</div></div><div class="chart-container rise"><div class="chart-title">AI岗位需求增长排行</div><div class="chart-subtitle">非技术岗位增速远超技术岗位</div><div class="chart" id="chart-rise-2"></div><div class="chart-source">数据来源：BOSS直聘、猎聘大数据研究院</div></div></div><div class="insight-box"><div class="insight-box-title">关键发现</div><div class="insight-box-content"><strong>AI创造的新职业远不止程序员。</strong>非技术类AI岗位（销售+682%、专业服务+200%）的增速远超技术岗（+317%），说明AI正在渗透每一个行业、每一种职能。CXO级AI人才需求增长281.6%，AI正在重塑整个职场金字塔。</div></div></div></section>
+
+    <section class="chapter-fall" id="chapter-fall"><div class="section"><div class="section-header"><div class="section-number">Chapter 02</div><h2 class="section-title">AI正在消灭什么？</h2><p class="section-subtitle">用数据量化"消灭"的真实规模，避免恐慌叙事</p><div class="section-divider fall"></div></div><div class="data-grid"><div class="data-card"><div class="data-card-icon fall">⚠️</div><div class="data-card-value fall">88%</div><div class="data-card-label">数据录入员自动化风险</div><div class="data-card-desc">数据录入员成为自动化风险最高的职业，88%的工作内容可能被AI替代。</div><div class="data-card-source">数据来源：综合研究预测</div></div><div class="data-card"><div class="data-card-icon fall">📉</div><div class="data-card-value fall">21,490</div><div class="data-card-label">2026年4月因AI裁员人数</div><div class="data-card-desc">美国企业2026年4月因AI裁员21490人，占当月裁员总数的26%。</div><div class="data-card-source">数据来源：Challenger Gray & Christmas</div></div><div class="data-card"><div class="data-card-icon fall">👨‍💻</div><div class="data-card-value fall">54%</div><div class="data-card-label">程序员公司岗位优化比例</div><div class="data-card-desc">54.03%的程序员所在公司过去一年发生岗位优化，38.51%公司已将AI能力纳入绩效考核。</div><div class="data-card-source">数据来源：脉脉《2026春招职场洞察报告》</div></div></div><div class="chart-pair"><div class="chart-container fall"><div class="chart-title">15个职业自动化风险排行</div><div class="chart-subtitle">从数据录入员到创意总监，风险梯度分布</div><div class="risk-bars" id="risk-bars"></div><div class="chart-source">数据来源：综合研究预测（基于麦肯锡、世界经济论坛等报告交叉验证）</div></div><div class="chart-container fall"><div class="chart-title">薪资 × 自动化风险全景图</div><div class="chart-subtitle">气泡大小代表从业人数，颜色代表风险等级</div><div class="chart" id="chart-fall-1"></div><div class="chart-source">数据来源：综合研究预测、国家统计局、各行业薪酬报告</div></div></div><div class="insight-box"><div class="insight-box-title">关键发现</div><div class="insight-box-content"><strong>AI对岗位的"消灭"不是突然的失业潮，而是一个渐进的"技能替代"过程。</strong>数据录入员（88%）、速记员（85%）、银行柜员（78%）等重复性高的工作风险最高，而创意总监（10%）、心理咨询师（15%）等需要人类情感和创造力的工作风险最低。</div></div></div></section>
+
+    <section class="chapter-human" id="chapter-human"><div class="section"><div class="section-header"><div class="section-number">Chapter 03</div><h2 class="section-title">谁在焦虑？焦虑有道理吗？</h2><p class="section-subtitle">用数据诊断焦虑的根源</p><div class="section-divider human"></div></div><div class="data-grid"><div class="data-card"><div class="data-card-icon human">😰</div><div class="data-card-value human">49.5%</div><div class="data-card-label">客服岗焦虑比例最高</div><div class="data-card-desc">客服岗49.5%担心自己被淘汰，成为各岗位中焦虑比例最高的群体。</div><div class="data-card-source">数据来源：智联招聘（37980份样本）</div></div><div class="data-card"><div class="data-card-icon human">🤔</div><div class="data-card-value human">36.1%</div><div class="data-card-label">担忧被AI替代</div><div class="data-card-desc">36.1%的职场人担忧技术发展过快导致被替代，但57.2%愿意从事AI职业。</div><div class="data-card-source">数据来源：智联招聘</div></div><div class="data-card"><div class="data-card-icon human">💪</div><div class="data-card-value human">57.2%</div><div class="data-card-label">愿意从事AI职业</div><div class="data-card-desc">超过半数的职场人愿意从事AI相关职业，45.4%认为AI工具运用能力最重要。</div><div class="data-card-source">数据来源：智联招聘</div></div></div><div class="chart-pair"><div class="chart-container human"><div class="chart-title">各岗位焦虑 vs 乐观情绪对比</div><div class="chart-subtitle">客服岗焦虑最高，白领最乐观</div><div class="chart" id="chart-human-1"></div><div class="chart-source">数据来源：智联招聘（37980份样本）</div></div><div class="chart-container human"><div class="chart-title">算法岗内部洗牌：旧退新进</div><div class="chart-subtitle">传统算法岗位萎缩，大模型算法岗位爆发</div><div class="chart" id="chart-human-2"></div><div class="chart-source">数据来源：《AI职业新趋势大数据研究报告》</div></div></div><div class="insight-box"><div class="insight-box-title">关键发现</div><div class="insight-box-content"><strong>焦虑与机遇并存。</strong>36.1%的职场人担忧被替代，但57.2%愿意从事AI职业。客服岗焦虑最高（49.5%），白领最乐观（50%），对AI的认知深度决定了焦虑程度。</div></div></div></section>
+
+    <section class="chapter-answer" id="chapter-answer"><div class="section"><div class="section-header"><div class="section-number">Chapter 04</div><h2 class="section-title">怎么办？数据给出的方法论</h2><p class="section-subtitle">基于前三章数据，给出可操作的行动建议</p><div class="section-divider answer"></div></div><div class="data-grid"><div class="data-card"><div class="data-card-icon answer">🎯</div><div class="data-card-value answer">45.4%</div><div class="data-card-label">首选AI工具运用能力</div><div class="data-card-desc">45.4%的职场人认为AI工具运用能力最重要，掌握AI工具可带来7000-9500元月薪溢价。</div><div class="data-card-source">数据来源：智联招聘</div></div><div class="data-card"><div class="data-card-icon answer">🔄</div><div class="data-card-value answer">25.6%</div><div class="data-card-label">复合型岗位占比</div><div class="data-card-desc">同时要求传统+新兴AI技能的复合型岗位从15.86%升至25.60%。</div><div class="data-card-source">数据来源：《AI职业新趋势大数据研究报告》</div></div><div class="data-card"><div class="data-card-icon answer">🚀</div><div class="data-card-value answer">+15.1%</div><div class="data-card-label">新就业形态增长</div><div class="data-card-desc">新就业形态职位数增长15.1%，宠物护理+70%、互联网医生+50%、游戏代打+283.2%。</div><div class="data-card-source">数据来源：暨南大学×智联招聘</div></div></div><div class="chart-container answer"><div class="chart-title">新就业形态爆发式增长</div><div class="chart-subtitle">AI时代反而催生了更多"人性化"的新职业</div><div class="chart" id="chart-answer-1"></div><div class="chart-source">数据来源：暨南大学×智联招聘《2025中国新就业形态报告》</div></div><div class="action-grid"><div class="action-card"><div class="action-card-number">01</div><div class="action-card-title">掌握AI工具</div><div class="action-card-desc">45.4%的职场人首选AI工具运用能力。掌握AI工具可带来7000-9500元的月薪溢价。</div><div class="action-card-stat"><span>💰</span> 月薪溢价 7000-9500元</div></div><div class="action-card"><div class="action-card-number">02</div><div class="action-card-title">培养复合能力</div><div class="action-card-desc">复合型岗位占比从15.86%升至25.60%。懂业务+懂AI，才是核心竞争力。</div><div class="action-card-stat"><span>📈</span> 复合岗位占比 25.6%</div></div><div class="action-card"><div class="action-card-number">03</div><div class="action-card-title">关注新赛道</div><div class="action-card-desc">新就业形态增长15.1%，宠物护理+70%、互联网医生+50%、游戏代打+283.2%。</div><div class="action-card-stat"><span>🚀</span> 新就业形态 +15.1%</div></div></div><div class="insight-box"><div class="insight-box-title">数据结论：审慎乐观</div><div class="insight-box-content"><strong>AI确实在"消灭"岗位，但速度远慢于"创造"新岗位。</strong>①非技术AI岗增速（+682%）远超技术岗（+317%）；②中国初级岗位保持韧性；③新就业形态在AI时代反而爆发。</div></div><div class="chart-container answer" style="position:relative"><button class="chart-download-btn" onclick="downloadChart('chart-us-cn')">📥 下载图表</button><div class="chart-title">中美就业结构对比</div><div class="chart-subtitle">AI冲击下两国就业市场的差异化表现</div><div class="chart-filter-bar"><button class="chart-filter-btn active" onclick="filterUSCN('all',this)">全部行业</button><button class="chart-filter-btn" onclick="filterUSCN('tech',this)">技术岗</button><button class="chart-filter-btn" onclick="filterUSCN('non-tech',this)">非技术岗</button><button class="chart-filter-btn" onclick="filterUSCN('new',this)">新兴岗</button></div><div class="chart" id="chart-us-cn"></div><div class="chart-source">数据来源：麦肯锡全球研究院、BOSS直聘、智联招聘</div></div><div class="chart-container answer" style="position:relative"><button class="chart-download-btn" onclick="downloadChart('chart-sankey')">📥 下载图表</button><div class="chart-title">AI时代职业迁徙路径</div><div class="chart-subtitle">从传统岗位流向新兴AI岗位的人才迁徙全景</div><div class="chart chart-sankey" id="chart-sankey"></div><div class="chart-source">数据来源：猎聘大数据研究院、脉脉、BOSS直聘</div></div><div class="chart-container answer" style="position:relative"><button class="chart-download-btn" onclick="downloadChart('chart-talent-gap')">📥 下载图表</button><div class="chart-title">AI人才供需缺口趋势</div><div class="chart-subtitle">需求持续攀升，供给严重不足</div><div class="chart" id="chart-talent-gap"></div><div class="chart-source">数据来源：中国信通院、猎聘大数据研究院、BOSS直聘</div></div></div></section>
+
+    <section class="conclusion"><div class="conclusion-content"><div class="conclusion-quote">潮汐之间，选择比浪潮更重要。</div><div class="conclusion-text">AI不会取代你，但会用AI的人会取代你。<br>真正的威胁不是技术，而是拒绝改变的自己。</div><div class="conclusion-source">基于8份权威报告的数据分析 · </div></div></section>
+
+    <footer class="footer" style="position:relative"><div class="footer-inner"><div><div class="footer-brand">AI就业加减法</div><p class="footer-desc">本作品基于8份权威报告的数据分析，覆盖中美两国数据。<br>数据来源：BOSS直聘、猎聘、麦肯锡、智联招聘、脉脉、中国信通院、暨南大学等。</p></div><div><div class="footer-title">数据来源</div><ul class="footer-links"><li><a href="#">BOSS直聘杭州AI岗位市场调研</a></li><li><a href="#">猎聘2025年度人才供需趋势报告</a></li><li><a href="#">麦肯锡全球研究院2030年预测</a></li><li><a href="#">智联招聘2025春季调查报告</a></li></ul></div><div><div class="footer-title">技术实现</div><ul class="footer-links"><li><a href="#">HTML5 + CSS3 + JavaScript</a></li><li><a href="#">ECharts 数据可视化</a></li><li><a href="#">GSAP ScrollTrigger</a></li><li><a href="#">响应式设计</a></li></ul></div></div><div class="footer-bottom"><div></div><div>© 2026 AI就业加减法 · 数据驱动叙事</div></div><div class="footer-copyright"><p><strong>版权声明</strong>：本作品为，所有内容仅供学习和研究使用。</p><p><strong>数据来源说明</strong>：数据来自 BOSS直聘、猎聘、智联招聘、脉脉、中国信通院、暨南大学、麦肯锡等权威机构公开报告。</p><p>© 2026 AI就业加减法 · 数据驱动叙事</p></div></footer>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Scroll progress
+        const scrollProgress = document.getElementById('scrollProgress');
+        window.addEventListener('scroll', () => {
+            const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+            scrollProgress.style.transform = `scaleX(${p})`;
+        });
+
+        // Mouse follower
+        const mouseFollower = document.getElementById('mouseFollower');
+        const mouseDot = document.getElementById('mouseDot');
+        const mouseGlow = document.getElementById('mouseGlow');
+        let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            mouseDot.style.left = mouseX + 'px'; mouseDot.style.top = mouseY + 'px';
+            mouseGlow.style.left = mouseX + 'px'; mouseGlow.style.top = mouseY + 'px';
+        });
+        function animateFollower() {
+            followerX += (mouseX - followerX) * 0.12;
+            followerY += (mouseY - followerY) * 0.12;
+            mouseFollower.style.left = followerX + 'px'; mouseFollower.style.top = followerY + 'px';
+            requestAnimationFrame(animateFollower);
+        }
+        animateFollower();
+        document.querySelectorAll('a,button,.data-card,.action-card,.nav-hamburger').forEach(el => {
+            el.addEventListener('mouseenter', () => { mouseFollower.style.width = '48px'; mouseFollower.style.height = '48px'; mouseFollower.style.background = 'rgba(14,165,233,0.18)'; });
+            el.addEventListener('mouseleave', () => { mouseFollower.style.width = '24px'; mouseFollower.style.height = '24px'; mouseFollower.style.background = 'rgba(14,165,233,0.1)'; });
+        });
+
+        // Hero canvas particles
+        const heroCanvas = document.getElementById('hero-canvas');
+        const ctx = heroCanvas.getContext('2d');
+        let canvasParticles = [], animationId;
+        function resizeCanvas() { heroCanvas.width = heroCanvas.parentElement.offsetWidth; heroCanvas.height = heroCanvas.parentElement.offsetHeight; }
+        resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * heroCanvas.width; this.y = Math.random() * heroCanvas.height;
+                this.size = Math.random() * 2 + 0.5; this.speedX = (Math.random() - 0.5) * 0.5; this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
+                this.color = ['#0ea5e9','#f97316','#8b5cf6','#38bdf8'][Math.floor(Math.random() * 4)];
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                if (this.x < 0 || this.x > heroCanvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > heroCanvas.height) this.speedY *= -1;
+            }
+            draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = this.color; ctx.globalAlpha = this.opacity; ctx.fill(); ctx.globalAlpha = 1; }
+        }
+        for (let i = 0; i < 80; i++) canvasParticles.push(new Particle());
+        function drawLines() {
+            for (let i = 0; i < canvasParticles.length; i++) for (let j = i + 1; j < canvasParticles.length; j++) {
+                const dx = canvasParticles[i].x - canvasParticles[j].x, dy = canvasParticles[i].y - canvasParticles[j].y, dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 120) { ctx.beginPath(); ctx.moveTo(canvasParticles[i].x, canvasParticles[i].y); ctx.lineTo(canvasParticles[j].x, canvasParticles[j].y); ctx.strokeStyle = `rgba(14,165,233,${0.15*(1-dist/120)})`; ctx.lineWidth = 0.5; ctx.stroke(); }
+            }
+        }
+        function animateParticles() { ctx.clearRect(0, 0, heroCanvas.width, heroCanvas.height); canvasParticles.forEach(p => { p.update(); p.draw(); }); drawLines(); animationId = requestAnimationFrame(animateParticles); }
+        animateParticles();
+        new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { if (!animationId) animateParticles(); } else { cancelAnimationFrame(animationId); animationId = null; } }); }, { threshold: 0.1 }).observe(document.getElementById('hero'));
+
+        // Parallax
+        gsap.to('.hero-content', { yPercent: 30, opacity: 0.3, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
+        gsap.to('.scroll-indicator', { opacity: 0, y: -20, scrollTrigger: { trigger: '.hero', start: 'top top', end: '20% top', scrub: 1 } });
+
+        // Navigation
+        const nav = document.getElementById('nav');
+        ScrollTrigger.create({ trigger: document.getElementById('hero'), start: 'bottom 80%', onEnter: () => nav.classList.add('visible'), onLeaveBack: () => nav.classList.remove('visible') });
+        const navLinks = document.querySelectorAll('.nav-links a');
+        document.querySelectorAll('section[id]').forEach(s => {
+            ScrollTrigger.create({ trigger: s, start: 'top center', end: 'bottom center', onEnter: () => { const id = s.getAttribute('id'); navLinks.forEach(l => { l.classList.remove('active'); if (l.getAttribute('href') === `#${id}`) l.classList.add('active'); }); } });
+        });
+        const navHamburger = document.getElementById('navHamburger'), mobileOverlay = document.getElementById('mobileOverlay');
+        navHamburger.addEventListener('click', () => { navHamburger.classList.toggle('active'); mobileOverlay.classList.toggle('active'); document.body.style.overflow = mobileOverlay.classList.contains('active') ? 'hidden' : ''; });
+        mobileOverlay.querySelectorAll('a').forEach(l => l.addEventListener('click', () => { navHamburger.classList.remove('active'); mobileOverlay.classList.remove('active'); document.body.style.overflow = ''; }));
+
+        // Counters
+        function animateCounter(el, target, dur=2000, pre='', suf='') {
+            const isF = target % 1 !== 0, t0 = performance.now();
+            function upd(t) { const p = Math.min((t-t0)/dur,1), v = target*(1-Math.pow(1-p,3)); el.textContent = pre + (isF ? v.toFixed(1) : Math.round(v).toLocaleString()) + suf; if (p<1) requestAnimationFrame(upd); }
+            requestAnimationFrame(upd);
+        }
+        document.querySelectorAll('.hero-stat-value').forEach((el, i) => {
+            const targets = [{t:74.1,p:'+',s:'%'},{t:88,p:'',s:'%'},{t:57.2,p:'',s:'%'}];
+            if (targets[i]) { el.textContent = targets[i].p + '0' + targets[i].s; setTimeout(() => animateCounter(el, targets[i].t, 2500, targets[i].p, targets[i].s), 800 + i * 300); }
+        });
+        const ccd = {'+74.1%':{t:74.1,p:'+',s:'%'},'+317%':{t:317,p:'+',s:'%'},'+682%':{t:682,p:'+',s:'%'},'88%':{t:88,p:'',s:'%'},'21,490':{t:21490,p:'',s:''},'54%':{t:54,p:'',s:'%'},'49.5%':{t:49.5,p:'',s:'%'},'36.1%':{t:36.1,p:'',s:'%'},'57.2%':{t:57.2,p:'',s:'%'},'45.4%':{t:45.4,p:'',s:'%'},'25.6%':{t:25.6,p:'',s:'%'},'+15.1%':{t:15.1,p:'+',s:'%'}};
+        document.querySelectorAll('.data-card-value').forEach(el => { const d = ccd[el.textContent.trim()]; if (d) ScrollTrigger.create({ trigger: el, start: 'top 85%', once: true, onEnter: () => animateCounter(el, d.t, 2000, d.p, d.s) }); });
+
+        // Floating particles
+        (function() { const c = document.getElementById('particles'); for (let i = 0; i < 25; i++) { const p = document.createElement('div'); p.style.cssText = `position:absolute;left:${Math.random()*100}%;width:${Math.random()*3+2}px;height:${Math.random()*3+2}px;background:${['#0ea5e9','#f97316','#8b5cf6','#38bdf8'][Math.floor(Math.random()*4)]};border-radius:50%;opacity:0.15;animation:float linear infinite ${Math.random()*15+15}s ${Math.random()*10}s`; c.appendChild(p); } })();
+
+        // Risk bars
+        const riskData = [{n:'数据录入员',v:88},{n:'速记员',v:85},{n:'银行柜员',v:78},{n:'收银员',v:75},{n:'客服代表',v:72},{n:'会计',v:68},{n:'翻译',v:62},{n:'法律助理',v:55},{n:'基础文案',v:52},{n:'初级程序员',v:45},{n:'数据分析师',v:35},{n:'医生',v:25},{n:'教师',v:20},{n:'心理咨询师',v:15},{n:'创意总监',v:10}];
+        const rbc = document.getElementById('risk-bars');
+        riskData.forEach(item => {
+            const cls = item.v >= 60 ? 'high' : item.v >= 30 ? 'medium' : 'low';
+            const el = document.createElement('div'); el.className = 'risk-bar-item'; el.style.cssText = 'opacity:0;transform:translateX(-20px)';
+            el.innerHTML = `<div class="risk-bar-name">${item.n}</div><div class="risk-bar-track"><div class="risk-bar-fill ${cls}" data-width="${item.v}" style="width:0"></div></div><div class="risk-bar-value">${item.v}%</div>`;
+            rbc.appendChild(el);
+        });
+        ScrollTrigger.create({ trigger: '#risk-bars', start: 'top 85%', once: true, onEnter: () => {
+            rbc.querySelectorAll('.risk-bar-item').forEach((item, i) => {
+                setTimeout(() => {
+                    item.style.transition = 'all 0.5s cubic-bezier(0.16,1,0.3,1)';
+                    item.style.opacity = '1'; item.style.transform = 'translateX(0)';
+                    const bar = item.querySelector('.risk-bar-fill');
+                    setTimeout(() => { bar.style.width = bar.getAttribute('data-width') + '%'; }, 150);
+                }, i * 60);
+            });
+        }});
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function(e) { e.preventDefault(); const t = document.querySelector(this.getAttribute('href')); if (t) t.scrollIntoView({behavior:'smooth',block:'start'}); }));
+
+        // ========== ECHARTS ==========
+
+        // Chart 1: AI岗位三年增速
+        const chart1 = echarts.init(document.getElementById('chart-rise-1'));
+        chart1.setOption({
+            backgroundColor: 'transparent',
+            grid: { top: 40, right: 40, bottom: 40, left: 60 },
+            xAxis: { type: 'category', data: ['2023年','2024年','2025年'], axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b'} },
+            yAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',formatter:'{value}%'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+            series: [{
+                data: [8.5, 36.5, 74.1], type: 'line', smooth: true, symbol: 'circle', symbolSize: 12,
+                lineStyle: { width: 4, color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#0ea5e9'},{offset:1,color:'#38bdf8'}]) },
+                itemStyle: { color: '#0ea5e9', borderWidth: 3, borderColor: '#ffffff' },
+                areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(14,165,233,0.25)'},{offset:1,color:'rgba(14,165,233,0)'}]) },
+                label: { show: true, position: 'top', formatter: '+{c}%', color: '#0ea5e9', fontSize: 14, fontWeight: 'bold' },
+                animationDuration: 2000, animationEasing: 'cubicOut'
+            }],
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, formatter: '{b}<br/>AI岗位月均新发增速: +{c}%' }
+        });
+
+        // Chart 2: AI岗位需求增长排行
+        const chart2 = echarts.init(document.getElementById('chart-rise-2'));
+        chart2.setOption({
+            backgroundColor: 'transparent',
+            grid: { top: 20, right: 100, bottom: 20, left: 150 },
+            xAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',formatter:'+{value}%'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+            yAxis: { type: 'category', data: ['非技术AI岗','AI工程师','CXO级AI人才','专业服务AI岗','应用型人才','高级管理AI岗'].reverse(), axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#1e293b'} },
+            series: [{
+                data: [682,317,281.6,200,160,139].reverse(), type: 'bar', barWidth: 24,
+                itemStyle: { color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#0ea5e9'},{offset:1,color:'#38bdf8'}]), borderRadius: [0,4,4,0] },
+                label: { show: true, position: 'right', formatter: '+{c}%', color: '#0ea5e9', fontSize: 12, fontWeight: 'bold' },
+                animationDuration: 1500, animationDelay: idx => idx * 200, animationEasing: 'elasticOut'
+            }],
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, formatter: '{b}: +{c}%' }
+        });
+
+        // Chart 3: 薪资×风险气泡图 (FIXED)
+        const chart3 = echarts.init(document.getElementById('chart-fall-1'));
+        const bubbleNames = ['数据录入员','速记员','银行柜员','收银员','客服代表','会计','翻译','法律助理','基础文案','初级程序员','数据分析师','医生','教师','心理咨询师','创意总监'];
+        chart3.setOption({
+            backgroundColor: 'transparent',
+            grid: { top: 50, right: 60, bottom: 60, left: 70 },
+            xAxis: {
+                name: '自动化风险 (%)', nameLocation: 'middle', nameGap: 35,
+                nameTextStyle: { color: '#475569', fontSize: 13, fontWeight: 600 },
+                axisLine: { lineStyle: { color: '#e2e8f0' } },
+                axisLabel: { color: '#64748b', formatter: '{value}%' },
+                splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+                min: 0, max: 100
+            },
+            yAxis: {
+                name: '月薪 (千元)', nameLocation: 'middle', nameGap: 45,
+                nameTextStyle: { color: '#475569', fontSize: 13, fontWeight: 600 },
+                axisLine: { lineStyle: { color: '#e2e8f0' } },
+                axisLabel: { color: '#64748b', formatter: '{value}k' },
+                splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+                min: 0, max: 30
+            },
+            series: [{
+                data: [
+                    [88,4,500],[85,5,300],[78,6,800],[75,4,1200],[72,5,1500],
+                    [68,8,1000],[62,10,600],[55,8,400],[52,6,900],[45,12,2000],
+                    [35,15,500],[25,20,400],[20,8,2500],[15,15,200],[10,25,100]
+                ],
+                type: 'scatter',
+                symbolSize: d => Math.sqrt(d[2]) * 1.2 + 8,
+                itemStyle: {
+                    color: p => {
+                        const r = p.data[0];
+                        if (r >= 60) return 'rgba(239,68,68,0.72)';
+                        if (r >= 30) return 'rgba(245,158,11,0.72)';
+                        return 'rgba(16,185,129,0.72)';
+                    },
+                    shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.08)', borderColor: '#fff', borderWidth: 2
+                },
+                label: {
+                    show: true, position: 'right', distance: 10,
+                    formatter: p => bubbleNames[p.dataIndex],
+                    color: '#475569', fontSize: 11, fontWeight: 500
+                },
+                emphasis: {
+                    itemStyle: { shadowBlur: 20, shadowColor: 'rgba(0,0,0,0.15)', borderWidth: 3 },
+                    label: { fontSize: 13, fontWeight: 'bold', color: '#1e293b' }
+                },
+                animationDuration: 2000, animationDelay: idx => idx * 120
+            }],
+            tooltip: {
+                backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: { color: '#1e293b' },
+                padding: [12, 16], extraCssText: 'box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-radius: 10px;',
+                formatter: p => {
+                    const r = p.data[0], lv = r >= 60 ? '🔴 高风险' : r >= 30 ? '🟡 中风险' : '🟢 低风险';
+                    return `<b>${bubbleNames[p.dataIndex]}</b><br/>自动化风险: <b>${r}%</b> ${lv}<br/>月薪: <b>${p.data[1]}千元</b><br/>从业人数: <b>${p.data[2]}万人</b>`;
+                }
+            }
+        });
+
+        // Chart 4: 雷达图
+        const chart4 = echarts.init(document.getElementById('chart-human-1'));
+        chart4.setOption({
+            backgroundColor: 'transparent',
+            radar: {
+                indicator: [{name:'客服',max:60},{name:'技术',max:60},{name:'管理',max:60},{name:'白领',max:60},{name:'蓝领',max:60}],
+                shape: 'circle', splitNumber: 4,
+                axisName: { color: '#1e293b', fontSize: 12 },
+                splitLine: { lineStyle: { color: '#e2e8f0' } },
+                splitArea: { show: true, areaStyle: { color: ['rgba(14,165,233,0.03)','rgba(14,165,233,0.06)'] } },
+                axisLine: { lineStyle: { color: '#e2e8f0' } }
+            },
+            series: [{ type: 'radar', data: [
+                { value: [49.5,35,31,28,22], name: '焦虑比例', lineStyle: {color:'#f97316',width:2}, areaStyle: {color:'rgba(249,115,22,0.15)'}, itemStyle: {color:'#f97316'} },
+                { value: [20,45,40,50,35], name: '乐观比例', lineStyle: {color:'#10b981',width:2}, areaStyle: {color:'rgba(16,185,129,0.15)'}, itemStyle: {color:'#10b981'} }
+            ], animationDuration: 2000 }],
+            legend: { data: ['焦虑比例','乐观比例'], textStyle: {color:'#64748b'}, bottom: 0 },
+            tooltip: { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'} }
+        });
+
+        // Chart 5: 算法岗洗牌
+        const chart5 = echarts.init(document.getElementById('chart-human-2'));
+        chart5.setOption({
+            backgroundColor: 'transparent',
+            grid: { top: 40, right: 40, bottom: 40, left: 100 },
+            xAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',formatter:'{value}%'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+            yAxis: { type: 'category', data: ['大模型算法','ML算法','视觉算法','图像算法'], axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#1e293b'} },
+            series: [
+                { name: '变化前', data: [17.7,6,10.5,11], type: 'bar', barWidth: 20, itemStyle: {color:'#94a3b8'}, label: {show:true,position:'right',formatter:'{c}%',color:'#64748b',fontSize:11} },
+                { name: '变化后', data: [34.7,4,4.5,8], type: 'bar', barWidth: 20, itemStyle: {color: p => p.dataIndex === 0 ? '#f97316' : '#ef4444'}, label: {show:true,position:'right',formatter:'{c}%',color:'#1e293b',fontSize:11,fontWeight:'bold'} }
+            ],
+            legend: { data: ['变化前','变化后'], textStyle: {color:'#64748b'}, top: 0 },
+            tooltip: { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'} }
+        });
+
+        // Chart 6: 新就业形态
+        const chart6 = echarts.init(document.getElementById('chart-answer-1'));
+        chart6.setOption({
+            backgroundColor: 'transparent',
+            grid: { top: 20, right: 100, bottom: 20, left: 120 },
+            xAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',formatter:'+{value}%'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+            yAxis: { type: 'category', data: ['互联网医疗','宠物护理','新就业形态整体','游戏代打'].reverse(), axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#1e293b'} },
+            series: [{
+                data: [50,70,15.1,283.2].reverse(), type: 'bar', barWidth: 24,
+                itemStyle: { color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#8b5cf6'},{offset:1,color:'#a78bfa'}]), borderRadius: [0,4,4,0] },
+                label: { show: true, position: 'right', formatter: '+{c}%', color: '#8b5cf6', fontSize: 12, fontWeight: 'bold' },
+                animationDuration: 1500, animationDelay: idx => idx * 250, animationEasing: 'elasticOut'
+            }],
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, formatter: '{b}: +{c}%' }
+        });
+
+        const allCharts = [chart1, chart2, chart3, chart4, chart5, chart6];
+
+        // Chart download
+        function downloadChart(chartId) {
+            const dom = document.getElementById(chartId);
+            if (!dom) return;
+            const inst = echarts.getInstanceByDom(dom);
+            if (!inst) { alert('图表未初始化'); return; }
+            const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' });
+            const a = document.createElement('a'); a.href = url; a.download = chartId + '.png'; a.click();
+        }
+        document.querySelectorAll('.chart-download-btn').forEach(btn => {
+            if (!btn.onclick) {
+                const container = btn.closest('.chart-container');
+                const chartDiv = container ? container.querySelector('.chart') : null;
+                if (chartDiv) btn.onclick = () => downloadChart(chartDiv.id);
+            }
+        });
+
+        // US-CN chart
+        const chartUSCN = echarts.init(document.getElementById('chart-us-cn'));
+        const usCNData = {
+            all: { categories: ['AI工程师','数据科学家','产品经理','AI销售','客服运营','内容审核','数据录入','传统会计','AI培训师','提示工程师'], china: [317,180,120,682,-15,-45,-60,-30,450,999], us: [280,210,95,420,-35,-55,-75,-45,380,850] },
+            tech: { categories: ['AI工程师','数据科学家','大模型算法','AI安全','提示工程师'], china: [317,180,200,350,999], us: [280,210,180,400,850] },
+            'non-tech': { categories: ['AI销售','客服运营','内容审核','数据录入','传统会计'], china: [682,-15,-45,-60,-30], us: [420,-35,-55,-75,-45] },
+            'new': { categories: ['AI培训师','提示工程师','AI伦理官','数据标注师','AI产品经理'], china: [450,999,320,280,120], us: [380,850,290,150,95] }
+        };
+        function renderUSCNChart(filter) {
+            const d = usCNData[filter];
+            chartUSCN.setOption({
+                backgroundColor: 'transparent', grid: { top: 50, right: 30, bottom: 80, left: 60 },
+                legend: { data: ['中国','美国'], textStyle: {color:'#64748b'}, top: 0 },
+                xAxis: { type: 'category', data: d.categories, axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',rotate:30,fontSize:11} },
+                yAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b',formatter:'{value}%'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+                series: [
+                    { name: '中国', data: d.china, type: 'bar', barWidth: 18, itemStyle: { color: p => p.data >= 0 ? new echarts.graphic.LinearGradient(0,1,0,0,[{offset:0,color:'#0ea5e9'},{offset:1,color:'#38bdf8'}]) : new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ef4444'},{offset:1,color:'#f87171'}]), borderRadius: [4,4,0,0] } },
+                    { name: '美国', data: d.us, type: 'bar', barWidth: 18, itemStyle: { color: p => p.data >= 0 ? new echarts.graphic.LinearGradient(0,1,0,0,[{offset:0,color:'#f97316'},{offset:1,color:'#fb923c'}]) : new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#94a3b8'},{offset:1,color:'#64748b'}]), borderRadius: [4,4,0,0] } }
+                ],
+                tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, extraCssText: 'box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:8px;', formatter: params => { let s = '<b>' + params[0].axisValue + '</b><br/>'; params.forEach(p => { s += p.marker + ' ' + p.seriesName + ': ' + (p.value >= 0 ? '+' : '') + p.value + '%<br/>'; }); return s; } },
+                animationDuration: 800
+            }, true);
+        }
+        renderUSCNChart('all'); allCharts.push(chartUSCN);
+        function filterUSCN(filter, btn) { document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active')); if (btn) btn.classList.add('active'); renderUSCNChart(filter); }
+
+        // Sankey chart
+        const chartSankeyChart = echarts.init(document.getElementById('chart-sankey'));
+        chartSankeyChart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, extraCssText: 'box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:8px;', formatter: p => p.dataType === 'edge' ? p.data.source + ' → ' + p.data.target + '<br/>迁徙人数: ' + p.data.value + '万人' : p.name },
+            series: [{
+                type: 'sankey', layout: 'none', emphasis: { focus: 'adjacency' }, nodeAlign: 'left', orient: 'horizontal',
+                nodeWidth: 24, nodeGap: 14, left: 60, right: 60, top: 20, bottom: 20,
+                label: { color: '#1e293b', fontSize: 12, fontWeight: 500 },
+                lineStyle: { color: 'gradient', opacity: 0.35, curveness: 0.5 }, itemStyle: { borderWidth: 0 },
+                data: [
+                    {name:'传统制造业',itemStyle:{color:'#64748b'}},{name:'传统IT',itemStyle:{color:'#64748b'}},{name:'金融后台',itemStyle:{color:'#64748b'}},{name:'客服中心',itemStyle:{color:'#64748b'}},{name:'传统媒体',itemStyle:{color:'#64748b'}},{name:'基础教育',itemStyle:{color:'#64748b'}},
+                    {name:'技能转型期',itemStyle:{color:'#f59e0b'}},{name:'AI学习期',itemStyle:{color:'#f59e0b'}},{name:'复合能力期',itemStyle:{color:'#f59e0b'}},
+                    {name:'AI工程师',itemStyle:{color:'#0ea5e9'}},{name:'数据科学家',itemStyle:{color:'#0ea5e9'}},{name:'AI产品经理',itemStyle:{color:'#0ea5e9'}},
+                    {name:'AI培训师',itemStyle:{color:'#8b5cf6'}},{name:'提示工程师',itemStyle:{color:'#8b5cf6'}},{name:'AI伦理官',itemStyle:{color:'#8b5cf6'}},
+                    {name:'数据标注师',itemStyle:{color:'#10b981'}},{name:'AI运维',itemStyle:{color:'#10b981'}}
+                ],
+                links: [
+                    {source:'传统IT',target:'AI工程师',value:85},{source:'传统IT',target:'数据科学家',value:45},{source:'传统IT',target:'AI产品经理',value:30},{source:'传统IT',target:'AI运维',value:25},
+                    {source:'传统制造业',target:'技能转型期',value:60},{source:'传统制造业',target:'数据标注师',value:35},{source:'技能转型期',target:'AI运维',value:30},{source:'技能转型期',target:'数据标注师',value:30},
+                    {source:'金融后台',target:'AI学习期',value:40},{source:'金融后台',target:'数据科学家',value:25},{source:'AI学习期',target:'AI产品经理',value:20},{source:'AI学习期',target:'提示工程师',value:20},
+                    {source:'客服中心',target:'AI培训师',value:50},{source:'客服中心',target:'提示工程师',value:35},{source:'客服中心',target:'复合能力期',value:30},{source:'复合能力期',target:'AI伦理官',value:15},{source:'复合能力期',target:'AI培训师',value:15},
+                    {source:'传统媒体',target:'提示工程师',value:30},{source:'传统媒体',target:'AI伦理官',value:20},{source:'基础教育',target:'AI培训师',value:40},{source:'基础教育',target:'AI伦理官',value:15}
+                ],
+                animationDuration: 1200
+            }]
+        }); allCharts.push(chartSankeyChart);
+
+        // Talent gap chart
+        const chartTalentGap = echarts.init(document.getElementById('chart-talent-gap'));
+        chartTalentGap.setOption({
+            backgroundColor: 'transparent', grid: { top: 50, right: 40, bottom: 40, left: 60 },
+            legend: { data: ['AI人才需求(万人)','AI人才供给(万人)','缺口(万人)'], textStyle: {color:'#64748b'}, top: 0 },
+            xAxis: { type: 'category', data: ['2020','2021','2022','2023','2024','2025E','2026E','2027E'], axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b'} },
+            yAxis: { type: 'value', axisLine: {lineStyle:{color:'#e2e8f0'}}, axisLabel: {color:'#64748b'}, splitLine: {lineStyle:{color:'#f1f5f9'}} },
+            series: [
+                { name: 'AI人才需求(万人)', data: [120,165,230,340,480,620,810,1050], type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, lineStyle: {width:3,color:'#0ea5e9'}, itemStyle: {color:'#0ea5e9'}, areaStyle: {color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(14,165,233,0.2)'},{offset:1,color:'rgba(14,165,233,0)'}])} },
+                { name: 'AI人才供给(万人)', data: [80,100,130,165,200,245,300,370], type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, lineStyle: {width:3,color:'#10b981'}, itemStyle: {color:'#10b981'}, areaStyle: {color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(16,185,129,0.2)'},{offset:1,color:'rgba(16,185,129,0)'}])} },
+                { name: '缺口(万人)', data: [40,65,100,175,280,375,510,680], type: 'bar', barWidth: 20, itemStyle: {color: new echarts.graphic.LinearGradient(0,1,0,0,[{offset:0,color:'rgba(249,115,22,0.4)'},{offset:1,color:'#f97316'}]), borderRadius: [4,4,0,0]}, label: {show:true,position:'top',formatter:'{c}万',color:'#f97316',fontSize:11,fontWeight:'bold'} }
+            ],
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0', textStyle: {color:'#1e293b'}, extraCssText: 'box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:8px;' },
+            animationDuration: 1000
+        }); allCharts.push(chartTalentGap);
+
+        window.addEventListener('resize', () => allCharts.forEach(c => c.resize()));
+
+        // Lazy load charts
+        new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { const inst = echarts.getInstanceByDom(e.target); if (inst) inst.resize(); } }); }, { threshold: 0.1 });
+        document.querySelectorAll('.chart').forEach(c => { if (c.id) { const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { const inst = echarts.getInstanceByDom(e.target); if (inst) inst.resize(); } }); }, { threshold: 0.1 }); obs.observe(c); } });
+
+        // @keyframes float for particles
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = '@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:0.15}90%{opacity:0.15}100%{transform:translateY(-100px) rotate(720deg);opacity:0}}';
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html>
